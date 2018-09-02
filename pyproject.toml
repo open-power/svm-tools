@@ -1,0 +1,33 @@
+[tool.poetry]
+name = "svm_tool"
+version = "0.1.0"
+description = "Tools to manage ESM blobs for SVMs"
+
+authors = [	"Scott Cheloha <scheloh@us.ibm.com>",
+		"Michael Anderson <andmike@linux.ibm.com>",
+		"Sukadev Bhattiprolu  <sukadev@linux.ibm.com>",
+]
+
+maintainers = [	"Ram Pai <linuxram@us.ibm.com>" ]
+
+license = "BSD-3-Clause"
+include = ["LICENSE", "BSD-3-Clause.txt"]
+
+[tool.poetry.dependencies]
+python = "^3.6"
+cython = "^0.28"
+pycryptodomex = "^3.8"
+pyyaml = "^5.1"
+
+[tool.poetry.dev-dependencies]
+pytest = "^3.0"
+
+[tool.poetry.scripts]
+esm = 'svm_tool.esm.esm:main'
+esm-digest = 'svm_tool.esm_digest.esm_digest:main'
+svm-tool = 'svm_tool.svm_tool:main'
+
+[build-system]
+requires = ["poetry>=0.12"]
+build-backend = "poetry.masonry.api"
+

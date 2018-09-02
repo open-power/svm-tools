@@ -1,0 +1,311 @@
+NAME
+
+     esm - manipulate an ESM blob
+
+SYNOPSIS
+
+     esm attach [-nv] [-c comment] [-r name] -b blob -f file -s seckey
+     esm authorize [-nv] [-c comment] -b blob -p pubkey -s seckey
+     esm create [-nv] [-c comment] -b blob -p pubkey
+     esm detach [-nv] -b blob -f file
+     esm display [-v] -b blob
+     esm extract [-nv] -b blob -f file -s seckey
+     esm generate [-nv] -p pubkey -s seckey
+     esm make [-v] -b blob -y config
+     esm revoke [-nv] -b blob -p pubkey
+
+DESCRIPTION
+
+  The esm utility creates and modifies ESM blobs (ESMs).
+
+  ESMs allow for the secure distribution of one or more attached files
+  to one or more authorized recipients.
+
+  ESMs are created with a public key.  This initial public key will be
+  the "origin key" for the lifetime of the ESM.  At creation time a
+  random symmetric key is generated and encrypted with the origin key.
+  This symmetric key will be the "master key" for the lifetime of the
+  ESM.
+
+  Files may be attached to an ESM with the origin key.  They are
+  encrypted with the master key while at rest.
+
+  Additional public keys may be authorized by the origin key.  These
+  keys are called "recipient keys".  The private half of a recipient key
+  can be used to retrieve any attached file from an ESM.
+
+  The ESM preparation process is roughly as follows:
+
+     - Generate an origin key or select a key generated prior.
+
+     - Create a new ESM with the chosen origin key.
+
+     - Attach one or more files.
+
+     - Authorize one or more recipient keys.
+
+  This preparation process can be automated to some degree with the
+  make subcommand.
+
+  ESMs may also be modified as follows:
+
+     - Files may be detached.
+
+     - Authorization for recipient keys may be revoked.
+
+  The subcommands enabling these and other actions are described in
+  the subsequent sections.
+
+ATTACH
+
+     esm attach [-nv] [-c comment] [-r name] -b blob -f file -s seckey
+
+  Attach file to blob.  seckey is the private half of blob's origin key.
+
+  When attaching file the esm utility will choose a new name for it
+  within blob.  By default the new name is the base name of file.  For
+  example, if file is "/path/to/foo", its name in blob will be "foo".
+
+  If this default naming is undesirable an alternative name may be
+  specified with the -r option.
+
+  The options are as follows:
+
+     -c comment  Add a comment when attaching file.  The comment should
+                 be a hint regarding the purpose and origins of file.
+
+                 The comment is stored in the clear and should not
+                 contain any sensitive information.
+
+     -n          Dry-run mode.  Do everything except update blob.
+
+     -r name     Rename file to name when attaching it to blob.
+
+     -v          Verbose mode.  Produce additional debug output.  May
+                 be be specified multiple times for even more debug
+                 output.
+
+AUTHORIZE
+
+     esm authorize [-nv] [-c comment] -b blob -p pubkey -s seckey
+
+  Authorize pubkey to extract attached files from blob.  seckey is the
+  private half of blob's origin key.  pubkey will become one of blob's
+  recipient keys.
+
+  The optons are as follows:
+
+     -c comment  Add a comment when authorizing pubkey.  The comment
+                 should be a hint regarding the owner of pubkey.
+
+                 The comment is stored in the clear and should not
+                 contain any sensitive information.
+
+     -n          Dry-run mode.  Do everything except update blob.
+
+     -v          Verbose mode.  Produce additional debug output.  May
+                 be be specified multiple times for even more debug
+                 output.
+
+CREATE
+
+     esm create [-nv] [-c comment] -b blob -p pubkey
+
+  Create a new ESM with pubkey as its origin key and write it to blob.
+
+  The options are as follows:
+
+     -c comment  Add a comment when inaugurating pubkey as blob's
+                 origin key.  The comment should be a hint about
+                 pubkey or its owner.
+
+                 The comment is stored in the clear and should not
+                 contain any sensitive information.
+
+     -n          Dry-run mode.  Do everything except create blob.
+
+     -v          Verbose mode.  Produce additional debug output.  May
+                 be be specified multiple times for even more debug
+                 output.
+
+DETACH
+
+     esm detach [-nv] -b blob -f file
+
+  Remove file from blob.  This operation is destructive and cannot be
+  reversed.
+
+  If a new name was given with the -r option at attachment time the
+  new name should be given as file.
+
+  blob's attached files and their names can be printed with the
+  display subcommand.
+
+  The options are as follows:
+
+     -n          Dry-run mode.  Do everything except update blob.
+
+     -v          Verbose mode.  Produce additional debug output.  May
+                 be be specified multiple times for even more debug
+                 output.
+
+DISPLAY
+
+     esm display [-v] -b blob
+
+  Print information about blob's origin key, any authorized recipient
+  keys, and any attached files to the standard output.
+
+  The options are as follows:
+
+     -v          Verbose mode.  Produce additional debug output.  May
+                 be be specified multiple times for even more debug
+                 output.
+
+EXTRACT
+
+     esm extract [-nv] -b blob -f file -s seckey
+
+  Extract file from blob, decrypt it, and write it to the standard
+  output.  seckey is the private half of either (a) the origin key or
+  (b) any authorized recipient key.
+
+  If a new name was given with the -r option at attachment time then
+  name should be given as file.
+
+  blob's attached files and their names can be printed with the
+  display subcommand.
+
+  The options are as follows:
+
+     -v          Verbose mode.  Produce additional debug output.  May
+                 be be specified multiple times for even more debug
+                 output.
+
+GENERATE
+
+     esm generate [-nv] -p pubkey -s seckey
+
+   Create a new asymmetric key pair suitable for use with the esm
+   utility.  The public half of the pair will be written to pubkey
+   and the private half will be written to seckey.
+
+   You will be prompted for a passphrase to encrypt seckey with.
+
+   Use of asymmetric keys produced by the generate subcommand is
+   strongly recommended when selecting an origin key or authorizing
+   recipient keys.  Key pairs sourced from other tools may be
+   incompatible with the esm utility.
+
+   The options are as follows:
+
+     -n          Dry-run mode.  Do everything except write pubkey and
+                 seckey.
+
+     -v          Verbose mode.  Produce additional debug output.  May
+                 be be specified multiple times for even more debug
+                 output.
+
+MAKE
+
+     esm make [-v] -b blob -y config
+
+  Make a new ESM using the directions in config and write it to blob.
+
+  config is a YAML file with the following format:
+
+   - origin:
+      [comment: "..."]
+       pubkey: "/path/to/pubkey"
+       seckey: "path/to/seckey"
+  [- recipient:]
+      [comment: "..."]
+       pubkey: "/path/to/pubkey"
+  [...]
+  [- file:]
+      [comment: "..."]
+      [rename: "..."]
+       path: "/path/to/file"
+  [...]
+
+  config's top-level is a list.  There are three accepted items in the
+  list: an "origin" item, zero or more "recipient" items, and zero or
+  more "file" items.
+
+  ORIGIN
+
+    There must be one "origin" item in the list.  This item describes
+    file's origin key.  It is a dictionary with the following entries:
+
+	NAME		TYPE		MANDATORY
+	pubkey		string		yes
+	seckey		string		yes
+	comment		string		no
+
+     pubkey is the path of the public half of blob's intended origin
+     key.  It should be a product of the generate subcommand.
+
+     seckey is the path of the private half of the blob's intended
+     origin key.  It should be a product of the generate subcommand.
+
+     comment is an optional hint about which keys were chosen for
+     pubkey and seckey.
+
+     pubkey and seckey must be the public and private halves of a single
+     asymmetric key pair.
+
+  RECIPIENT
+
+    There may be zero or more "recipient" items in the list.  Each
+    recipient item describes an authorized recipient for file.  Each
+    item is a dictionary with the following entries:
+
+	NAME		TYPE		MANDATORY
+	pubkey		string		yes
+	comment		string		no
+
+     pubkey is the path of the public half of the recipient key pair
+     to authorize.  It should be a product of the generate subcommand.
+
+     comment is an optional hint about the owner of pubkey.
+
+  FILE
+
+    There may be zero or more "file" items in the list.  Each item
+    describes a file to attach to blob.  Each item is a dictionary
+    with the following entries:
+
+	NAME		TYPE		MANDATORY
+	path		string		yes
+	comment		string		no
+	name		string		no
+
+     path is the path of a file to attach to blob.
+
+     comment is an optional hint about the source or purpose of the
+     file.
+
+     name is an optional identifier to give to the file at attachment
+     time.  Absent this entry the attachment will be named according
+     to the process described in the attach subcommand.
+
+REVOKE
+
+     esm revoke [-nv] -b blob -p pubkey
+
+  Revoke authorization for pubkey from blob.  This action is
+  destructive and cannot be reversed.
+
+  blob's recipient keys and their hashes can be printed with the
+  display subcommand.
+
+  The esm utility will never revoke authorization for blob's origin
+  key.
+
+  The options are as follows:
+
+     -n          Dry-run mode.  Do everything except update blob.
+
+     -v          Verbose mode.  Produce additional debug output.  May
+                 be be specified multiple times for even more debug
+                 output.

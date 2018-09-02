@@ -1,0 +1,186 @@
+DESCRIPTION
+
+  This document details the format of an ESM file (ESM).  An ESM enables
+  the secure distribution of one or more attachments to one or more
+  authorized recipients.  See the README in this directory for documentation
+  on the creation and manipulation of ESMs.
+
+  ESMs are flattened devicetrees (FDT).  A valid ESM is valid input for any
+  conforming FDT utility, e.g. the Device Tree Compiler (DTC).
+
+  ESMs are stored as flattened devicetree binaries (DTB), though in principle
+  they could be distributed as device-tree source (DTS), i.e. in plain text.
+
+OVERVIEW
+
+  At ESM creation time a symmetric key is randomly generated and
+  encrypted with a user-supplied public key.  The symmetric key is
+  called the "master key".  The user-supplied public key is called the
+  "origin key" and its corresponding private key is needed to retrieve
+  the master key.
+
+  Other public keys may be authorized later.  At authorization time a
+  subnode in "/lockboxes" is created.  This subnode contains a copy of
+  the master key encrypted with the given public key.  The subnode
+  also contains a fingerprint of the public key.  The fingerprint is
+  used to identify which lockbox corresponds to a given public key.
+
+  The owner of an authorized key may attach files to the ESM.  At
+  attachment time a subnode in "/files" is created.  This subnode
+  contains the contents of the attachment encrypted with the master
+  key.
+  
+  The owner of an authorized key may extract any attachment.
+
+DEVICE TREE SOURCE
+
+  The DTS for a valid ESM is approximately as follows:
+
+/dts-v1/;
+
+/ {
+	compatible = "ibm,esm";
+
+	lockboxes {
+		origin-lockbox {
+			untrusted-comment = "...";
+			encrypted-symkey = [...];
+			pubkey-fingerprint {
+				algorithm = "SHA256";
+				hash = [...];
+			};
+		};
+		lockbox-1 {
+			untrusted-comment = "...";
+			encrypted-symkey = <...>;
+			pubkey-fingerprint {
+				algorithm = "SHA256";
+				hash = <...>;
+			};
+		};
+		lockbox-2 {
+			...
+		};
+		...
+		lockbox-N {
+			...
+		};
+	};
+
+	digest {
+		digests-fdt {
+			untrusted-comment = "...";
+			iv = <...>;
+			mac = <...>;
+			ciphertext = <...>;
+			algorithm = "AES256-GCM";
+		};
+	};
+
+	file {
+		files-fdt = [ ... ];
+		};
+	};
+};
+
+  The DTS for a valid file FDT is approximately as follows:
+
+/dts-v1/;
+
+/ {
+	compatible = "ibm,esm-file";
+	files {
+		file-1 {
+			untrusted-comment = "...";
+			iv = <...>;
+			mac = <...>;
+			ciphertext = <...>;
+			algorithm = "AES256-GCM";
+		};
+		file-2 {
+			...
+		};
+		...
+	};
+};
+
+ROOT ("/")
+
+  The ESM tree root ("/") contains the following:
+
+	NAME			WHAT		TYPE		VALUE
+	compatible		property	string		"ibm,esm"
+	lockboxes		node		n/a		n/a
+	files			node		n/a		n/a
+
+LOCKBOXES
+
+  The lockboxes node ("/lockboxes") contains one or more subnodes.  There
+  is always at least one subnode, origin-lockbox.
+
+  Additional subnodes within "/lockboxes" have names of the form
+
+	lockbox-num
+
+  where num is a positive integer.  The value of num serves only to
+  differentiate the lockbox nodes and is otherwise meaningless.  The
+  presence of a lockbox with a given number does not imply the existence
+  of a lockbox with a smaller number.  When a new lockbox is added to the
+  ESM it is assigned a number greater than those of the existing lockboxes.
+  A lockbox's number may be reused if it is removed from the ESM.
+
+  Each lockbox contains the following:
+
+	NAME			WHAT		TYPE		VALUE
+	untrusted-comment	property	string		varies
+	encrypted-symkey	property	binary		varies
+	pubkey-fingerprint	node		n/a		n/a
+
+  The pubkey-fingerprint node within a lockbox contains the following:
+
+	NAME			WHAT		TYPE		VALUE
+	algorithm		property	string		"SHA256"
+	hash			property	binary		varies
+
+  untrusted-comment is a user-supplied hint about the asymmetric key
+  used at authorization time.
+
+  encrypted-symkey is the master key encrypted with a public key used at
+  authorization time.
+
+  pubkey-fingerprint contains the hash of the public key used at authorization
+  time.  The hash is produced with the given algorithm.  The only supported
+  algorithm is SHA256.
+
+FILES ("/files")
+
+  The files node stores zero or more files attached to the ESM.
+
+  Each subnode is named according to the file given by the user at attachment
+  time.  There are no limitations on the subnode names beyond those imposed
+  by the FDT standard.
+
+  Each attachment's subnode contains the following:
+
+	NAME			WHAT		TYPE		VALUE
+	algorithm		property	string		"AES256-GCM"
+	ciphertext		property	binary		varies
+	iv			property	binary		varies
+	mac			property	binary		varies
+	untrusted-comment	property	string		varies
+
+
+  algorithm is the symmetric encryption algorithm used to produce
+  ciphertext from the plaintext of the file.  The only supported
+  algorithm is AES256-GCM.
+
+  ciphertext is the contents of the attached file encrypted with the
+  master key using the given algorithm.
+
+  iv is the initialization vector used to encrypt the file at
+  attachment time.  It is always randomly chosen.
+
+  mac is the GCM tag yielded at encryption time.
+
+  untrusted-comment is a user-supplied hint about the purpose or
+  origin of the file.

@@ -1,0 +1,18 @@
+# SPDX-License-Identifier: BSD-3-Clause
+# Copyright 2019-2020 IBM Corp
+
+FROM python:3.7-alpine3.8
+WORKDIR /app
+RUN apk add --no-cache --virtual .build-deps gcc git musl-dev \
+  swig dtc-dev make flex bison wget && \
+  git clone https://github.com/dgibson/dtc && \
+  cd dtc && \
+  make install && \
+  cd .. && \
+  wget -r -l1 --no-parent -nd -nv -A'.whl,.txt' http://ausgsa.ibm.com/projects/b/bml/user.andmike/svm-tools/Releases/latest && \
+  pip install --upgrade pip && \
+  pip install -r requirements.txt && \
+  pip install svm_tool*.whl && \
+  apk del .build-deps && \
+  apk add binutils cpio
+ENV PYTHONPATH "/app/dtc/pylibfdt:${PYTHONPATH}"

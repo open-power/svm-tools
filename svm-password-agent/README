@@ -1,0 +1,20 @@
+
+To build the binaries run
+
+	make
+
+To build rpm run either
+
+	make rpm
+
+which basically runs:
+
+	make tgz
+	cp svm-password-agent.tgz $((rpm --eval %{_sourcdir}))
+	rpmbuild -bb svm-password-agent.spec
+
+Note that to build the rpm, the Makefile will install sources in
+~/rpmbuild/ and build the rpm there.
+
+TODO:	Formal URL for the source tar file needs to be finalized and the
+	svm-password-agent.spec file needs to be updated.

@@ -1,0 +1,13 @@
+# SPDX-License-Identifier: BSD-3-Clause
+# Copyright 2020 IBM Corp
+#
+# microdnf cannot install / resolve rpms
+# install deps with microdnf directly
+
+FROM registry.fedoraproject.org/fedora-minimal:31
+ADD /svm-tool-*.noarch.rpm /
+RUN microdnf install python3-pycryptodomex python3-pyyaml \
+    python3-libfdt python3-setuptools binutils cpio findutils   \
+    python3-Cython && \
+    rpm -ivh svm-tool*.rpm && \
+    microdnf clean all

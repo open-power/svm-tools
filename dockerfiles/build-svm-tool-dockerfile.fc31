@@ -1,0 +1,30 @@
+# SPDX-License-Identifier: BSD-3-Clause
+# Copyright 2020 IBM Corp
+#
+# microdnf cannot install / resolve rpms
+# install deps with microdnf directly
+
+# Use this Dockerfile to build a container that you can use to
+# build the svm tool. This is more complex than 'Dockerfile.fc31'
+# because it pulls in tools needed to build the tool.
+#
+# Use the `Dockerfile.fc31` if you already have the rpm for svm-tool.
+#
+FROM registry.fedoraproject.org/fedora-minimal:31
+RUN microdnf install			\
+		binutils		\
+		glibc			\
+		make			\
+		poetry			\
+		python			\
+		python3-pycryptodomex	\
+		python3-pyyaml 		\
+		python3-libs		\
+		python3-libfdt		\
+		python3-setuptools	\
+		rpm-build		\
+		wget 			\
+		&& 			\
+    wget https://kojipkgs.fedoraproject.org//packages/Cython/0.29.13/2.fc31/ppc64le/python3-Cython-0.29.13-2.fc31.ppc64le.rpm && \
+    rpm -ihv python3-Cython-0.29.13-2.fc31.ppc64le.rpm && \
+    microdnf clean all

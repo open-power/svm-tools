@@ -1,0 +1,182 @@
+#!/usr/bin/env bash
+###############################################################################
+#
+#  SVM Setup
+#
+###############################################################################
+
+set -u
+IFS=$'\n\t'
+
+PROG=$(basename "${0}")
+
+DRY_RUN=0
+
+# Reset
+COLOR_OFF='\033[0m' # Text Reset
+
+# Bold High Intensity
+BIRED='\033[1;91m'    # Red
+BIGREEN='\033[1;92m'  # Green
+BIYEL='\033[1;93m'    # Yellow
+
+# Define quiet versions of pushd and popd
+pushd()
+{
+  builtin pushd "${@}" > /dev/null
+}
+
+#shellcheck disable=SC2120
+popd()
+{
+  builtin popd "${@-}" > /dev/null
+}
+
+write_stderr_red ()
+{
+  printf "%s %b %s\n" "${PROG}" "[ ${BIRED}ERROR${COLOR_OFF} ]:" "${1}" >&2
+}
+
+write_stderr_green ()
+{
+  printf "%s %b %s\n" "${PROG}" "[ ${BIGREEN}OK${COLOR_OFF} ]:" "${1}" >&2
+}
+
+write_stderr ()
+{
+  printf "%s %s %s\n" "${PROG}" "[ INFO ]:" "${1}" >&2
+}
+
+stderr_exit ()
+{
+  write_stderr_red "${1}"
+  exit "${2}"
+}
+
+write_stdout ()
+{
+  printf "%s %s %s\n" "${PROG}" "[ INFO ]:" "${1}"
+}
+
+write_stdout_warn ()
+{
+  printf "%s %b %s\n" "${PROG}" "[ ${BIYEL}WARN${COLOR_OFF} ]:" "${1}" >&2
+}
+
+print_help ()
+{
+  cat <<-EndHelp
+
+  Usage: ${PROG} [-h] [-d] <Kernel_version>
+  
+  Wrapper for enabling a virtual image to be used as a Ultravisor secure guest.
+
+  Optional arguments:
+
+    -n, --dry-run
+     Print operations.
+
+    -h, --help
+      Display ${PROG} help and exit.
+
+EndHelp
+}
+
+
+warning ()
+{
+  write_stdout "========================================================================"
+  write_stdout_warn "This cmd should be run from a virtual machine that is not in the cloud."
+  write_stdout_warn "If this is run on a cloud virtual machine, the integrity of your"
+  write_stdout_warn "new svm could be impacted."
+  write_stdout "========================================================================"
+}
+
+gen_svm_initramfs ()
+{
+
+  _tmp_mnt_dir="$(mktemp -d /var/tmp/${PROG}.XXXXXX)"
+
+  write_stdout "Running update-initramfs"
+  update-initramfs -c -k "$1" -b "${_tmp_mnt_dir}" > /dev/null 2>&1
+
+  cp "/boot/vmlinux-${1}" "${_tmp_mnt_dir}"
+
+  initrd_file="$(basename ${_tmp_mnt_dir}/initrd.img-${1})"
+  kernel_file="vmlinux-${1}"
+
+  write_stdout "initrd_file: ${initrd_file}"
+  write_stdout "kernel_file: ${kernel_file}"
+  
+  sed 's,initramfs:.*,initramfs: '"\"/boot/${initrd_file}\""',g' -i /opt/ibm/pef/svm_tools/cfg_files/svm_blob.yml
+  sed 's,kernel:.*,kernel: '"\"/boot/${kernel_file}\""',g' -i /opt/ibm/pef/svm_tools/cfg_files/svm_blob.yml
+
+  # GENERATE
+#/usr/bin/docker run -it -v ${_tmp_mnt_dir}/:/boot:z -v /opt/ibm/pef/svm_tools/:/app/esm_blob:z --user 0:0 --group-add 0 svm/svm-tool svm-tool esm generate -p keys/owner/rsapubkey -s keys/owner/rsaprivkey
+
+  # MAKE
+  write_stdout "Running svm-tool esm make"
+
+  /usr/bin/docker run -it -v ${_tmp_mnt_dir}/:/boot:z -v /opt/ibm/pef/svm_tools/:/app/esm_blob:z --user 0:0 --group-add 0 svm/svm-tool svm-tool esm make -b esm_blob/esm_blob/test_esmb.dtb -y esm_blob/cfg_files/svm_blob.yml
+
+  # ADD
+  write_stdout "Running svm-tool svm add"
+
+  /usr/bin/docker run -it -v ${_tmp_mnt_dir}/:/boot:z -v /opt/ibm/pef/svm_tools/:/app/esm_blob:z --user 0:0 --group-add 0 svm/svm-tool svm-tool svm add -i /boot/${initrd_file} -b esm_blob/esm_blob/test_esmb.dtb -f /boot/${initrd_file}-svm
+
+  write_stdout "Copied ${initrd_file}-svm to /boot"
+
+  rm -f /boot/${initrd_file}-svm
+  cp ${_tmp_mnt_dir}/${initrd_file}-svm /boot
+
+  rm -f ${_tmp_mnt_dir}/*${1}*
+
+  rmdir "${_tmp_mnt_dir}"
+  return 0
+}
+
+update_crypttab ()
+{
+  if [ -e "/etc/crypttab" ]; then
+    echo 1
+  fi
+  #sed 's/discard/keyscript=\/opt\/ibm\/pef\/bin\/esmb-get-file/g' -i /etc/crypttab
+
+  return 0
+}
+
+main ()
+{
+
+  local positionals=()
+
+  while [[ "$#" -gt 0 ]]; do
+    case "$1" in
+      -h|--help)
+        print_help
+	exit 0
+	;;
+      -n|--dry-run)
+	stderr_exit "Dry run not enabled" 1
+        # DRY_RUN=1
+        ;;
+     *)
+        positionals+=("$1")
+	;;
+    esac
+    shift
+  done
+
+  [[ ${#positionals[@]} -lt 1 ]] && stderr_exit "Missing positional(s)" 1
+
+  warning
+
+  gen_svm_initramfs "${positionals[0]}"
+
+  write_stdout "SVM set-up complete"
+
+  exit 0
+}
+
+main "$@"
+

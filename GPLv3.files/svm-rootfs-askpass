@@ -1,0 +1,73 @@
+#!/usr/bin/bash
+# vim: set tabstop=8 shiftwidth=4 softtabstop=4 expandtab smarttab colorcolumn=80:
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
+# Based on clevis-luks-askpass
+# Copyright (c) 2016 Red Hat, Inc.
+# Author: Harald Hoyer <harald@redhat.com>
+# Author: Nathaniel McCallum <npmccallum@redhat.com>
+#
+# Copyright 2019 IBM Corp.
+#
+set -u
+shopt -s nullglob
+
+path=/run/systemd/ask-password
+while getopts ":lp:" o; do
+    case "$o" in
+    l) loop=true;;
+    p) path=$OPTARG;;
+    esac
+done
+
+while true; do
+    todo=0
+
+    for question in $path/ask.*; do
+        unlocked=false
+        d=
+        s=
+
+        while read line; do
+		echo $line
+            case "$line" in
+                Id=cryptsetup:*) d="${line##Id=cryptsetup:/dev/disk/by-uuid/}"
+					;;
+                Socket=*) s="${line##Socket=}";;
+            esac
+        done < "$question"
+
+        [ -z "$d" -o -z "$s" ] && continue
+        echo "[SVM] Ask for $d on $s"
+
+	cryptsetup isLuks --type luks2 UUID=$d || continue
+
+	pt="$(esmb-get-file -f rootd)";
+        if [ -z "${pt}" ]; then
+              echo "[SVM] esmb-get-file failed"
+	      pt=""
+        fi
+
+         echo -n "+$pt" | nc -U -u --send-only "$s"
+         unlocked=true
+        [ $unlocked == true ] && continue
+        todo=$((todo + 1))
+    done
+
+    if [ $todo -eq 0 ] || [ "$loop" != "true" ]; then
+        break;
+    fi
+
+    sleep 0.5
+done

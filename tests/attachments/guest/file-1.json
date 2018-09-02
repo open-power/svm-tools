@@ -1,0 +1,10 @@
+{
+  "guest": {
+    "system": "f28_uvbase",
+    "node": "test1",
+    "release": "5.0.0-rc2-00237-gc28657651e02",
+    "version": "#3 SMP Wed Apr 17 12:25:45 PDT 2019",
+    "processor": "ppc64le",
+    "distribution": "Fedora 28 (Twenty Eight"
+  }
+}

@@ -1,0 +1,70 @@
+#!/bin/sh
+
+set -u
+IFS=$'\n\t'
+
+PROG=$(basename "${0}")
+
+# Reset
+COLOR_OFF='\033[0m' # Text Reset
+
+# Bold High Intensity
+BIRED='\033[1;91m'     # Red
+BIGREEN='\033[1;92m'  # Green
+
+# Define quiet versions of pushd and popd
+pushd()
+{
+  builtin pushd "${@}" > /dev/null
+}
+
+#shellcheck disable=SC2120
+popd()
+{
+  builtin popd "${@-}" > /dev/null
+}
+
+write_stderr_red ()
+{
+  printf "%s %b %s\n" "${PROG}" "[ ${BIRED}ERROR${COLOR_OFF} ]:" "${1}" >&2
+}
+
+write_stderr_green ()
+{
+  printf "%s %b %s\n" "${PROG}" "[ ${BIGREEN}OK${COLOR_OFF} ]:" "${1}" >&2
+}
+
+write_stderr ()
+{
+  printf "%s %s %s\n" "${PROG}" "[ INFO ]:" "${1}" >&2
+}
+
+main ()
+{
+
+  write_stderr "Number of tries: ${CRYPTTAB_TRIED-0}"
+
+  _svm_state=$(cat /sys/devices/system/cpu/svm)
+
+  if [ "${_svm_state}" -eq "1" ]; then
+    write_stderr_green "SVM State Enabled"
+  else
+    write_stderr_red "SVM State Disabled"
+  fi
+
+  write_stderr "Calling esmb-get-file for ${CRYPTTAB_NAME-None}"
+
+  _key="$(/opt/ibm/pef/bin/esmb-get-file -f crypttab 2> /dev/null)"
+
+  if [ -z "${_key}" ]; then
+    write_stderr_red "esmb-get-file failed. Failing back to askpass"
+    /lib/cryptsetup/askpass "Please enter passphrase:  "
+  else
+    write_stderr_green "Using esmb-get-file key"
+    printf "%s" "${_key}" | tr -d '\n'
+  fi
+
+  exit 0
+}
+
+main "$@"

@@ -1,0 +1,19 @@
+---
+# Create a ESM Blob
+- origin:
+    pubkey: "tests/keys/owner/rsapubkey"
+    seckey: "tests/keys/owner/rsaprivkey"
+- recipient:
+    comment: "ultra_tpm"
+    pubkey: "tests/keys/tpm/rsapubkey.pem"
+- digest:
+    args: "init=/bin/sh svm=1"
+    initramfs: "boot/fs_small_dtc.cpio.xz"
+    kernel: "boot/vmlinux"
+- file:
+    name: "file-1"
+    path: "tests/attachments/guest/file-1.dump.xz"
+- file:
+    name: "file-2"
+    path: "tests/attachments/guest/file-2.dump.xz"
+

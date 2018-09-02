@@ -1,0 +1,9 @@
+
+NOTES/TODO:
+
+	- Having multiple Dockerfiles in the same directory seems to
+	  be inefficient (increases "build context size" and time to
+	  create).
+
+	- Also, convention for naming multiple Dockerfiles in containers
+	  seems to be unclear.
