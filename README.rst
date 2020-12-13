@@ -3,8 +3,12 @@ svm_tool
 
 Install poetry
 --------------
- If poetry is not available on your system, install it by running
-the following command
+ If poetry is not available on your system, install the poetry package.
+
+.. code-block:: console
+dnf install poetry
+
+Or install it by running the following command
 
 .. code-block:: console
 curl -sSL https://raw.githubusercontent.com/python-poetry/poetry/master/get-poetry.py | python3 -
