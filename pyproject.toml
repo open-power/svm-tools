@@ -14,13 +14,13 @@ license = "BSD-3-Clause"
 include = ["LICENSE", "BSD-3-Clause.txt"]
 
 [tool.poetry.dependencies]
-python = "^3.6"
-cython = "^0.28"
-pycryptodomex = "^3.8"
-pyyaml = "^5.1"
+python = ">=3.6"
+cython = ">=0.28"
+pycryptodomex = ">=3.8"
+pyyaml = ">=5.1"
 
 [tool.poetry.dev-dependencies]
-pytest = "^3.0"
+pytest = ">=3.0"
 
 [tool.poetry.scripts]
 esm = 'svm_tool.esm.esm:main'
